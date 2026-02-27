@@ -1,0 +1,311 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" font-family="'Inter', 'SF Pro Display', -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f1a"/>
+      <stop offset="50%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="phase1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:0.06"/>
+    </linearGradient>
+    <linearGradient id="phase2Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:0.06"/>
+    </linearGradient>
+    <linearGradient id="phase3Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:0.18"/>
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:0.06"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#f093fb"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#4facfe"/>
+    </linearGradient>
+    <!-- 发光滤镜 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <!-- 流动粒子 -->
+    <circle id="particle" r="3" fill="#667eea" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="920" fill="url(#bgGrad)"/>
+  <!-- 网格装饰 -->
+  <g opacity="0.03" stroke="#fff" stroke-width="0.5">
+    <line x1="0" y1="0" x2="0" y2="920"><animate attributeName="x1" values="0;1200" dur="60s" repeatCount="indefinite"/><animate attributeName="x2" values="0;1200" dur="60s" repeatCount="indefinite"/></line>
+  </g>
+  <g opacity="0.04">
+    <circle cx="100" cy="100" r="200" fill="none" stroke="#667eea" stroke-width="0.5">
+      <animate attributeName="r" values="200;220;200" dur="8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1100" cy="800" r="180" fill="none" stroke="#4facfe" stroke-width="0.5">
+      <animate attributeName="r" values="180;200;180" dur="6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- 标题区域 -->
+  <text x="600" y="52" text-anchor="middle" fill="#e0e0ff" font-size="26" font-weight="700" letter-spacing="1">
+    Claude Code 工程化开发流程
+    <animate attributeName="opacity" values="0;1" dur="1s" fill="freeze"/>
+  </text>
+  <text x="600" y="78" text-anchor="middle" fill="#8888aa" font-size="13" letter-spacing="0.5">
+    Boris Tane 方法论 × /code-research → /writing-plans → /executing-plans
+  </text>
+  <line x1="300" y1="92" x2="900" y2="92" stroke="#667eea" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- ═══════════════ PHASE 1: 调研 ═══════════════ -->
+  <g opacity="0" transform="translate(40, 110)">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.3s" fill="freeze"/>
+    <!-- 卡片背景 -->
+    <rect x="0" y="0" width="360" height="380" rx="16" fill="url(#phase1Grad)" stroke="#667eea" stroke-width="0.8" stroke-opacity="0.4" filter="url(#softShadow)"/>
+    <!-- 阶段标签 -->
+    <rect x="16" y="16" width="90" height="28" rx="14" fill="#667eea" fill-opacity="0.2" stroke="#667eea" stroke-width="0.6"/>
+    <text x="61" y="35" text-anchor="middle" fill="#a0b0ff" font-size="12" font-weight="600">PHASE 1</text>
+    <!-- 标题 -->
+    <text x="20" y="72" fill="#e0e0ff" font-size="20" font-weight="700">🔍 深度调研</text>
+    <text x="20" y="92" fill="#7878aa" font-size="11">/code-research · research.md</text>
+
+    <!-- Boris 方法 -->
+    <rect x="16" y="108" width="328" height="105" rx="10" fill="#1a1a3e" fill-opacity="0.6" stroke="#555577" stroke-width="0.5"/>
+    <text x="30" y="128" fill="#9999bb" font-size="10" font-weight="600" letter-spacing="1">BORIS TANE 方法</text>
+    <text x="30" y="148" fill="#c0c0dd" font-size="12">• "deep-read directive" 深度阅读代码</text>
+    <text x="30" y="166" fill="#c0c0dd" font-size="12">• 输出到 research.md 持久化</text>
+    <text x="30" y="184" fill="#c0c0dd" font-size="12">• 审查理解 → 纠正误解</text>
+    <text x="30" y="202" fill="#c0c0dd" font-size="12">• 关键词: "deeply" "intricacies"</text>
+
+    <!-- 我的增强 -->
+    <rect x="16" y="222" width="328" height="105" rx="10" fill="#667eea" fill-opacity="0.08" stroke="#667eea" stroke-width="0.5"/>
+    <text x="30" y="242" fill="#a0b0ff" font-size="10" font-weight="600" letter-spacing="1">YOUR SKILL 增强</text>
+    <text x="30" y="262" fill="#c0c0dd" font-size="12">• /code-research 自动化调研流程</text>
+    <text x="30" y="280" fill="#c0c0dd" font-size="12">• 输出结构化调研文档到 docs/research/</text>
+    <text x="30" y="298" fill="#c0c0dd" font-size="12">• 架构约束 + 依赖关系自动识别</text>
+    <text x="30" y="316" fill="#c0c0dd" font-size="12">• 归档命名: YYYY-MM-DD-code-{topic}.md</text>
+
+    <!-- 产出物标签 -->
+    <rect x="16" y="340" width="120" height="26" rx="13" fill="#667eea" fill-opacity="0.15" stroke="#667eea" stroke-width="0.5">
+      <animate attributeName="fill-opacity" values="0.15;0.25;0.15" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <text x="76" y="358" text-anchor="middle" fill="#a0b0ff" font-size="11" font-weight="500">📄 research.md</text>
+  </g>
+
+  <!-- ═══════════════ PHASE 2: 规划 ═══════════════ -->
+  <g opacity="0" transform="translate(420, 110)">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="0.7s" fill="freeze"/>
+    <rect x="0" y="0" width="360" height="380" rx="16" fill="url(#phase2Grad)" stroke="#f093fb" stroke-width="0.8" stroke-opacity="0.4" filter="url(#softShadow)"/>
+    <rect x="16" y="16" width="90" height="28" rx="14" fill="#f093fb" fill-opacity="0.2" stroke="#f093fb" stroke-width="0.6"/>
+    <text x="61" y="35" text-anchor="middle" fill="#f0a0ff" font-size="12" font-weight="600">PHASE 2</text>
+    <text x="20" y="72" fill="#e0e0ff" font-size="20" font-weight="700">📋 计划制定</text>
+    <text x="20" y="92" fill="#7878aa" font-size="11">/writing-plans · plan.md</text>
+
+    <rect x="16" y="108" width="328" height="105" rx="10" fill="#1a1a3e" fill-opacity="0.6" stroke="#555577" stroke-width="0.5"/>
+    <text x="30" y="128" fill="#9999bb" font-size="10" font-weight="600" letter-spacing="1">BORIS TANE 方法</text>
+    <text x="30" y="148" fill="#c0c0dd" font-size="12">• 输出 plan.md 含代码片段+路径</text>
+    <text x="30" y="166" fill="#c0c0dd" font-size="12">• Annotation Cycle: 1-6 轮批注</text>
+    <text x="30" y="184" fill="#c0c0dd" font-size="12">• 内联笔记 → Claude 更新 → 重复</text>
+    <text x="30" y="202" fill="#c0c0dd" font-size="12">• 最终添加 granular todo list</text>
+
+    <rect x="16" y="222" width="328" height="105" rx="10" fill="#f093fb" fill-opacity="0.08" stroke="#f093fb" stroke-width="0.5"/>
+    <text x="30" y="242" fill="#f0a0ff" font-size="10" font-weight="600" letter-spacing="1">YOUR SKILL 增强</text>
+    <text x="30" y="262" fill="#c0c0dd" font-size="12">• /writing-plans 结构化计划模板</text>
+    <text x="30" y="280" fill="#c0c0dd" font-size="12">• 自动拆分 phases + tasks</text>
+    <text x="30" y="298" fill="#c0c0dd" font-size="12">• 引用 research 文档中的发现</text>
+    <text x="30" y="316" fill="#c0c0dd" font-size="12">• 计划完成后归档到 docs/plans/</text>
+
+    <rect x="16" y="340" width="100" height="26" rx="13" fill="#f093fb" fill-opacity="0.15" stroke="#f093fb" stroke-width="0.5">
+      <animate attributeName="fill-opacity" values="0.15;0.25;0.15" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <text x="66" y="358" text-anchor="middle" fill="#f0a0ff" font-size="11" font-weight="500">📄 plan.md</text>
+  </g>
+
+  <!-- ═══════════════ PHASE 3: 执行 ═══════════════ -->
+  <g opacity="0" transform="translate(800, 110)">
+    <animate attributeName="opacity" values="0;1" dur="0.6s" begin="1.1s" fill="freeze"/>
+    <rect x="0" y="0" width="360" height="380" rx="16" fill="url(#phase3Grad)" stroke="#4facfe" stroke-width="0.8" stroke-opacity="0.4" filter="url(#softShadow)"/>
+    <rect x="16" y="16" width="90" height="28" rx="14" fill="#4facfe" fill-opacity="0.2" stroke="#4facfe" stroke-width="0.6"/>
+    <text x="61" y="35" text-anchor="middle" fill="#80d0ff" font-size="12" font-weight="600">PHASE 3</text>
+    <text x="20" y="72" fill="#e0e0ff" font-size="20" font-weight="700">⚡ 执行实现</text>
+    <text x="20" y="92" fill="#7878aa" font-size="11">/executing-plans · 逐步实现</text>
+
+    <rect x="16" y="108" width="328" height="105" rx="10" fill="#1a1a3e" fill-opacity="0.6" stroke="#555577" stroke-width="0.5"/>
+    <text x="30" y="128" fill="#9999bb" font-size="10" font-weight="600" letter-spacing="1">BORIS TANE 方法</text>
+    <text x="30" y="148" fill="#c0c0dd" font-size="12">• "implement it all" 一次性执行</text>
+    <text x="30" y="166" fill="#c0c0dd" font-size="12">• 完成一个 task 就在 plan 中标记 ✓</text>
+    <text x="30" y="184" fill="#c0c0dd" font-size="12">• 切换为 supervisor 角色</text>
+    <text x="30" y="202" fill="#c0c0dd" font-size="12">• 简短纠正: "wider" "still cropped"</text>
+
+    <rect x="16" y="222" width="328" height="105" rx="10" fill="#4facfe" fill-opacity="0.08" stroke="#4facfe" stroke-width="0.5"/>
+    <text x="30" y="242" fill="#80d0ff" font-size="10" font-weight="600" letter-spacing="1">YOUR SKILL 增强</text>
+    <text x="30" y="262" fill="#c0c0dd" font-size="12">• /executing-plans 分阶段检查点</text>
+    <text x="30" y="280" fill="#c0c0dd" font-size="12">• 每阶段完成后 review checkpoint</text>
+    <text x="30" y="298" fill="#c0c0dd" font-size="12">• 支持 subagent 并行执行独立任务</text>
+    <text x="30" y="316" fill="#c0c0dd" font-size="12">• 完成后 plan 归档到 docs/plans/done/</text>
+
+    <rect x="16" y="340" width="100" height="26" rx="13" fill="#4facfe" fill-opacity="0.15" stroke="#4facfe" stroke-width="0.5">
+      <animate attributeName="fill-opacity" values="0.15;0.25;0.15" dur="3s" repeatCount="indefinite"/>
+    </rect>
+    <text x="66" y="358" text-anchor="middle" fill="#80d0ff" font-size="11" font-weight="500">✅ 代码交付</text>
+  </g>
+
+  <!-- ═══════════════ 连接箭头 Phase1 → Phase2 ═══════════════ -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.5s" fill="freeze"/>
+    <!-- 主箭头线 -->
+    <line x1="400" y1="300" x2="418" y2="300" stroke="url(#arrowGrad1)" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- 箭头头 -->
+    <polygon points="418,294 430,300 418,306" fill="#f093fb" opacity="0.8"/>
+    <!-- 流动粒子 -->
+    <circle r="3" fill="#a080ff" opacity="0">
+      <animate attributeName="opacity" values="0;0.9;0" dur="2s" begin="2s" repeatCount="indefinite"/>
+      <animateMotion dur="2s" begin="2s" repeatCount="indefinite" path="M400,300 L430,300"/>
+    </circle>
+  </g>
+
+  <!-- 连接箭头 Phase2 → Phase3 -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.8s" fill="freeze"/>
+    <line x1="780" y1="300" x2="798" y2="300" stroke="url(#arrowGrad2)" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="798,294 810,300 798,306" fill="#4facfe" opacity="0.8"/>
+    <circle r="3" fill="#80c0ff" opacity="0">
+      <animate attributeName="opacity" values="0;0.9;0" dur="2s" begin="2.5s" repeatCount="indefinite"/>
+      <animateMotion dur="2s" begin="2.5s" repeatCount="indefinite" path="M780,300 L810,300"/>
+    </circle>
+  </g>
+
+  <!-- ═══════════════ Annotation Cycle 循环箭头 (Phase 2) ═══════════════ -->
+  <g opacity="0" transform="translate(420, 110)">
+    <animate attributeName="opacity" values="0;1" dur="0.5s" begin="2s" fill="freeze"/>
+    <!-- 循环弧线 -->
+    <path d="M 180 380 Q 180 410, 120 410 Q 60 410, 60 380" fill="none" stroke="#f093fb" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>
+    <polygon points="56,382 60,372 64,382" fill="#f093fb" opacity="0.5"/>
+    <text x="120" y="426" text-anchor="middle" fill="#f093fb" font-size="10" opacity="0.6">批注循环 1-6 轮</text>
+    <!-- 脉冲动画 -->
+    <circle cx="120" cy="410" r="4" fill="#f093fb" opacity="0">
+      <animate attributeName="opacity" values="0;0.6;0" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="4;8;4" dur="3s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- ═══════════════ 底部: 核心原则 ═══════════════ -->
+  <g opacity="0" transform="translate(0, 560)">
+    <animate attributeName="opacity" values="0;1" dur="0.8s" begin="2.5s" fill="freeze"/>
+
+    <!-- 分隔线 -->
+    <line x1="60" y1="0" x2="1140" y2="0" stroke="#444466" stroke-width="0.5" stroke-dasharray="6,4"/>
+    <text x="600" y="30" text-anchor="middle" fill="#8888aa" font-size="14" font-weight="600" letter-spacing="2">核心原则</text>
+
+    <!-- 原则卡片 1 -->
+    <g transform="translate(60, 50)">
+      <rect x="0" y="0" width="250" height="90" rx="12" fill="#1a1a3e" stroke="#444466" stroke-width="0.5"/>
+      <text x="20" y="28" fill="#667eea" font-size="13" font-weight="600">🛡️ 计划先行</text>
+      <text x="20" y="48" fill="#9999bb" font-size="11">永远不要让 AI 在你审批计划</text>
+      <text x="20" y="64" fill="#9999bb" font-size="11">之前写代码。Plan → Review → Code</text>
+      <text x="20" y="80" fill="#667eea" font-size="10" opacity="0.6">— Boris Tane</text>
+    </g>
+
+    <!-- 原则卡片 2 -->
+    <g transform="translate(340, 50)">
+      <rect x="0" y="0" width="250" height="90" rx="12" fill="#1a1a3e" stroke="#444466" stroke-width="0.5"/>
+      <text x="20" y="28" fill="#f093fb" font-size="13" font-weight="600">📝 持久化产出物</text>
+      <text x="20" y="48" fill="#9999bb" font-size="11">research.md + plan.md 作为</text>
+      <text x="20" y="64" fill="#9999bb" font-size="11">"共享可变状态"，跨 compaction 存活</text>
+      <text x="20" y="80" fill="#f093fb" font-size="10" opacity="0.6">— Markdown as shared mutable state</text>
+    </g>
+
+    <!-- 原则卡片 3 -->
+    <g transform="translate(620, 50)">
+      <rect x="0" y="0" width="250" height="90" rx="12" fill="#1a1a3e" stroke="#444466" stroke-width="0.5"/>
+      <text x="20" y="28" fill="#4facfe" font-size="13" font-weight="600">🎯 角色切换</text>
+      <text x="20" y="48" fill="#9999bb" font-size="11">调研/规划阶段: 协作者 (详细指导)</text>
+      <text x="20" y="64" fill="#9999bb" font-size="11">执行阶段: 监督者 (简短纠正)</text>
+      <text x="20" y="80" fill="#4facfe" font-size="10" opacity="0.6">— Collaborator → Supervisor</text>
+    </g>
+
+    <!-- 原则卡片 4 -->
+    <g transform="translate(900, 50)">
+      <rect x="0" y="0" width="250" height="90" rx="12" fill="#1a1a3e" stroke="#444466" stroke-width="0.5"/>
+      <text x="20" y="28" fill="#00f2a0" font-size="13" font-weight="600">🔄 Skill 自动化</text>
+      <text x="20" y="48" fill="#9999bb" font-size="11">用 Skill 封装流程，触发词驱动</text>
+      <text x="20" y="64" fill="#9999bb" font-size="11">自动归档 + 引用链 + 检查点</text>
+      <text x="20" y="80" fill="#00f2a0" font-size="10" opacity="0.6">— Your Enhancement</text>
+    </g>
+  </g>
+
+  <!-- ═══════════════ 底部: 完整流程时间线 ═══════════════ -->
+  <g opacity="0" transform="translate(0, 740)">
+    <animate attributeName="opacity" values="0;1" dur="0.8s" begin="3s" fill="freeze"/>
+
+    <line x1="60" y1="0" x2="1140" y2="0" stroke="#444466" stroke-width="0.5" stroke-dasharray="6,4"/>
+    <text x="600" y="28" text-anchor="middle" fill="#8888aa" font-size="14" font-weight="600" letter-spacing="2">完整流程</text>
+
+    <!-- 时间线主轴 -->
+    <line x1="80" y1="65" x2="1120" y2="65" stroke="#333355" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- 流动光点 -->
+    <circle r="5" fill="#667eea" filter="url(#glow)">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="4s" repeatCount="indefinite"/>
+      <animateMotion dur="8s" repeatCount="indefinite" path="M80,65 L1120,65"/>
+    </circle>
+
+    <!-- 节点 1 -->
+    <circle cx="120" cy="65" r="8" fill="#1a1a3e" stroke="#667eea" stroke-width="2"/>
+    <text x="120" y="55" text-anchor="middle" fill="#667eea" font-size="9" font-weight="600">需求</text>
+    <text x="120" y="88" text-anchor="middle" fill="#7878aa" font-size="10">理解任务</text>
+
+    <!-- 节点 2 -->
+    <circle cx="280" cy="65" r="8" fill="#1a1a3e" stroke="#667eea" stroke-width="2"/>
+    <text x="280" y="55" text-anchor="middle" fill="#667eea" font-size="9" font-weight="600">/code-research</text>
+    <text x="280" y="88" text-anchor="middle" fill="#7878aa" font-size="10">深度阅读代码</text>
+
+    <!-- 节点 3 -->
+    <circle cx="440" cy="65" r="8" fill="#1a1a3e" stroke="#667eea" stroke-width="2"/>
+    <text x="440" y="55" text-anchor="middle" fill="#667eea" font-size="9" font-weight="600">审查</text>
+    <text x="440" y="88" text-anchor="middle" fill="#7878aa" font-size="10">纠正误解</text>
+
+    <!-- 节点 4 -->
+    <circle cx="580" cy="65" r="8" fill="#1a1a3e" stroke="#f093fb" stroke-width="2"/>
+    <text x="580" y="55" text-anchor="middle" fill="#f093fb" font-size="9" font-weight="600">/writing-plans</text>
+    <text x="580" y="88" text-anchor="middle" fill="#7878aa" font-size="10">制定计划</text>
+
+    <!-- 节点 5 - 循环 -->
+    <circle cx="700" cy="65" r="8" fill="#1a1a3e" stroke="#f093fb" stroke-width="2"/>
+    <text x="700" y="55" text-anchor="middle" fill="#f093fb" font-size="9" font-weight="600">批注</text>
+    <text x="700" y="88" text-anchor="middle" fill="#7878aa" font-size="10">迭代修订</text>
+    <!-- 小循环箭头 -->
+    <path d="M 710 58 Q 730 45, 720 65 Q 710 80, 690 72" fill="none" stroke="#f093fb" stroke-width="1" opacity="0.4" stroke-dasharray="2,2">
+      <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.5s" repeatCount="indefinite"/>
+    </path>
+
+    <!-- 节点 6 -->
+    <circle cx="840" cy="65" r="8" fill="#1a1a3e" stroke="#4facfe" stroke-width="2"/>
+    <text x="840" y="55" text-anchor="middle" fill="#4facfe" font-size="9" font-weight="600">/executing-plans</text>
+    <text x="840" y="88" text-anchor="middle" fill="#7878aa" font-size="10">分阶段执行</text>
+
+    <!-- 节点 7 -->
+    <circle cx="970" cy="65" r="8" fill="#1a1a3e" stroke="#4facfe" stroke-width="2"/>
+    <text x="970" y="55" text-anchor="middle" fill="#4facfe" font-size="9" font-weight="600">检查点</text>
+    <text x="970" y="88" text-anchor="middle" fill="#7878aa" font-size="10">review + 纠正</text>
+
+    <!-- 节点 8 - 终点 -->
+    <circle cx="1100" cy="65" r="10" fill="#00f2a0" fill-opacity="0.2" stroke="#00f2a0" stroke-width="2">
+      <animate attributeName="r" values="10;13;10" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <text x="1100" y="55" text-anchor="middle" fill="#00f2a0" font-size="9" font-weight="600">归档</text>
+    <text x="1100" y="88" text-anchor="middle" fill="#7878aa" font-size="10">plan → done/</text>
+  </g>
+
+  <!-- ═══════════════ 水印 ═══════════════ -->
+  <text x="1180" y="910" text-anchor="end" fill="#333355" font-size="9">Claude Code Engineering Workflow · 2026</text>
+
+</svg>
