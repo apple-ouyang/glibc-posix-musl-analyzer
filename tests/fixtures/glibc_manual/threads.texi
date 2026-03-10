@@ -1,0 +1,1 @@
+@c pthread_detach

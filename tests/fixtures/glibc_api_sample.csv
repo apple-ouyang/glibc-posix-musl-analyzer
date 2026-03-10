@@ -1,0 +1,5 @@
+glibc 接口名,glibc man所在位置,POSIX man所在位置,man 对比jielun ,man 对比分析路径
+basename,,,,
+pthread_detach,,,,
+accept4,,,,
+missing_symbol,,,,

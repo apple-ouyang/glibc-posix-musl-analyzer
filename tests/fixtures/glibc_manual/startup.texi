@@ -1,0 +1,2 @@
+@deftypefun void abort (void)
+@end deftypefun

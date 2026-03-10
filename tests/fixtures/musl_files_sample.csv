@@ -1,0 +1,4 @@
+文件名
+include/pthread.h
+src/thread/pthread_detach.c
+src/missing/not_found.c

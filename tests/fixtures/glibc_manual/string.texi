@@ -1,0 +1,3 @@
+@deftypefun {char *} basename (const char *@var{filename})
+The GNU version of basename returns the last component.
+@end deftypefun

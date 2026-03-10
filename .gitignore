@@ -1,0 +1,20 @@
+# macOS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+
+# 运行产物与临时输出
+/out/
+
+# 上游源码与打补丁后的展开目录
+# 当前 glibc/ 和 musl/ 都是嵌套仓库，建议在各自仓库内管理，
+# 根仓库只保留分析输入/输出与脚本。
+/glibc/
+/musl/
