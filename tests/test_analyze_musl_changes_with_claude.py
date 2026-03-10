@@ -14,6 +14,7 @@ from scripts.analyze_musl_changes_with_claude import (
     infer_file_class,
     infer_scope,
     list_file_commits,
+    load_existing_enriched_rows,
     load_musl_rows,
     normalize_analysis_result,
     parse_analysis_json,
@@ -184,6 +185,90 @@ class AnalyzeMuslChangesWithClaudeTests(unittest.IsolatedAsyncioTestCase):
             output = buffer.getvalue()
             self.assertIn("开始分析 1 个文件", output)
             self.assertIn("[1/1] include/elf.h -> 已分析", output)
+
+    async def test_analyze_rows_resumes_existing_rows_and_only_processes_pending(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            repo.mkdir()
+            self._init_git_repo(repo)
+
+            processed_file = repo / "include/elf.h"
+            processed_file.parent.mkdir(parents=True)
+            processed_file.write_text("#define EM_NUM 1\n", encoding="utf-8")
+            self._commit_all(repo, "import musl baseline")
+            processed_file.write_text("#define EM_NUM 2\n", encoding="utf-8")
+            self._commit_all(repo, "[Backport] add loongarch ids")
+
+            pending_file = repo / "src/thread/pthread_detach.c"
+            pending_file.parent.mkdir(parents=True)
+            pending_file.write_text("return 0;\n", encoding="utf-8")
+            self._commit_all(repo, "import thread baseline")
+            pending_file.write_text("return EINVAL;\n", encoding="utf-8")
+            self._commit_all(repo, "[Huawei] adjust detach semantics")
+
+            rows = [{header: "" for header in MUSL_ANALYSIS_HEADERS} for _ in range(2)]
+            rows[0]["文件路径"] = "include/elf.h"
+            rows[1]["文件路径"] = "src/thread/pthread_detach.c"
+            existing_rows = {
+                "include/elf.h": {
+                    "文件路径": "include/elf.h",
+                    "文件分类": "公共头文件",
+                    "作用范围": "全局",
+                    "当前是否存在": "是",
+                    "变更来源": "仅Backport",
+                    "Backport提交数": "1",
+                    "Huawei提交数": "0",
+                    "未归类提交数": "0",
+                    "修改类型": "架构适配",
+                    "修改内容摘要": "补充 LoongArch 相关常量定义",
+                    "关联接口": "",
+                    "变更影响结论": "主要是架构常量补充，未直接看到公开接口行为变化",
+                    "风险等级": "低",
+                    "分析状态": "已分析",
+                    "备注": "",
+                }
+            }
+            output_csv = Path(temp_dir) / "result.csv"
+            output_json = Path(temp_dir) / "result.json"
+            backend = FakeBackend(
+                {
+                    "修改类型": ["线程语义"],
+                    "修改内容摘要": "调整 pthread_detach 所在文件",
+                    "关联接口": ["pthread_detach"],
+                    "变更影响结论": "可能影响线程相关行为，需结合调用点复核",
+                    "风险等级": "中",
+                    "备注": "",
+                }
+            )
+
+            result = await analyze_rows(
+                rows,
+                backend=backend,
+                repo_root=repo,
+                timeout_seconds=5,
+                retries=0,
+                concurrency=1,
+                max_turns=2,
+                max_commits_per_file=5,
+                max_diff_lines_per_commit=80,
+                cwd=repo,
+                model="sonnet",
+                exclude_oldest_commit=True,
+                show_progress=False,
+                verbose=False,
+                existing_rows_by_path=existing_rows,
+                output_csv=output_csv,
+                output_json=output_json,
+                autosave=True,
+            )
+
+            self.assertEqual(backend.calls, 1)
+            self.assertEqual(result[0]["分析状态"], "已分析")
+            self.assertEqual(result[0]["变更来源"], "仅Backport")
+            self.assertEqual(result[1]["分析状态"], "已分析")
+            saved = load_existing_enriched_rows(output_csv)
+            self.assertEqual(saved["include/elf.h"]["分析状态"], "已分析")
+            self.assertEqual(saved["src/thread/pthread_detach.c"]["分析状态"], "已分析")
 
     def test_load_musl_rows_accepts_legacy_single_column_header(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

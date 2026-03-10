@@ -228,6 +228,44 @@ def load_musl_rows(csv_path: Path | str) -> list[dict[str, str]]:
     return rows
 
 
+def load_existing_enriched_rows(csv_path: Path | str) -> dict[str, dict[str, str]]:
+    path = Path(csv_path)
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or "文件路径" not in [name.strip() for name in reader.fieldnames]:
+            return {}
+        rows_by_path: dict[str, dict[str, str]] = {}
+        for source_row in reader:
+            relative_path = (source_row.get("文件路径") or "").strip()
+            if not relative_path:
+                continue
+            rows_by_path[relative_path] = {
+                header: (source_row.get(header) or "").strip() for header in MUSL_ANALYSIS_HEADERS
+            }
+        return rows_by_path
+
+
+def is_processed_row(row: dict[str, str]) -> bool:
+    status = (row.get("分析状态") or "").strip()
+    return status not in {"", "未开始"}
+
+
+def merge_base_and_existing_row(base_row: dict[str, str], existing_row: dict[str, str] | None) -> dict[str, str]:
+    merged = {header: base_row.get(header, "") for header in MUSL_ANALYSIS_HEADERS}
+    if existing_row:
+        for header in MUSL_ANALYSIS_HEADERS:
+            value = existing_row.get(header, "")
+            if value:
+                merged[header] = value
+    if not merged["文件分类"]:
+        merged["文件分类"] = infer_file_class(merged["文件路径"])
+    if not merged["作用范围"]:
+        merged["作用范围"] = infer_scope(merged["文件路径"])
+    return merged
+
+
 def ensure_git_repo(repo_root: Path | str) -> Path:
     root = Path(repo_root)
     completed = subprocess.run(
@@ -513,6 +551,30 @@ def format_progress_line(done: int, total: int, row: dict[str, str]) -> str:
     return f"[{done}/{total}] {row['文件路径']} -> {status} | 来源={source} | 风险={risk}"
 
 
+def materialize_rows_snapshot(
+    base_rows: list[dict[str, str]],
+    current_results: list[dict[str, str] | None],
+) -> list[dict[str, str]]:
+    snapshot: list[dict[str, str]] = []
+    for index, base_row in enumerate(base_rows):
+        row = current_results[index] if current_results[index] is not None else base_row
+        snapshot.append({header: row.get(header, "") for header in MUSL_ANALYSIS_HEADERS})
+    return snapshot
+
+
+def write_snapshot(
+    base_rows: list[dict[str, str]],
+    current_results: list[dict[str, str] | None],
+    output_csv: Path | str | None,
+    output_json: Path | str | None,
+) -> None:
+    snapshot_rows = materialize_rows_snapshot(base_rows, current_results)
+    if output_csv is not None:
+        write_csv(snapshot_rows, output_csv)
+    if output_json is not None:
+        write_json(snapshot_rows, output_json)
+
+
 async def analyze_rows(
     rows: list[dict[str, str]],
     *,
@@ -529,33 +591,63 @@ async def analyze_rows(
     exclude_oldest_commit: bool,
     show_progress: bool = True,
     verbose: bool = False,
+    existing_rows_by_path: dict[str, dict[str, str]] | None = None,
+    output_csv: Path | str | None = None,
+    output_json: Path | str | None = None,
+    autosave: bool = True,
+    pending_limit: int | None = None,
 ) -> list[dict[str, str]]:
     total = len(rows)
     if total == 0:
         emit_line("没有待分析的文件。", enabled=show_progress)
         return []
 
+    existing_rows_by_path = existing_rows_by_path or {}
+    base_rows = [merge_base_and_existing_row(row, existing_rows_by_path.get(row["文件路径"])) for row in rows]
+    current_results: list[dict[str, str] | None] = [None] * total
+    pending_indices: list[int] = []
+
+    for index, row in enumerate(base_rows):
+        if is_processed_row(row):
+            current_results[index] = row
+        else:
+            pending_indices.append(index)
+
+    skipped_existing = total - len(pending_indices)
+    if pending_limit is not None:
+        pending_indices = pending_indices[:pending_limit]
+    pending_set = set(pending_indices)
+
     emit_line(
-        f"开始分析 {total} 个文件 | backend={describe_backend(backend)} | model={model} | concurrency={concurrency} | timeout={timeout_seconds}s | retries={retries}",
+        f"开始分析 {total} 个文件 | 已处理 {skipped_existing} | 待处理 {len(pending_indices)} | backend={describe_backend(backend)} | model={model} | concurrency={concurrency} | timeout={timeout_seconds}s | retries={retries}",
         enabled=show_progress,
     )
+
+    if autosave and (output_csv is not None or output_json is not None):
+        write_snapshot(base_rows, current_results, output_csv, output_json)
+
+    if not pending_indices:
+        emit_line("没有待处理文件，已直接复用现有结果。", enabled=show_progress)
+        return materialize_rows_snapshot(base_rows, current_results)
+
     semaphore = asyncio.Semaphore(concurrency)
     progress_lock = asyncio.Lock()
-    completed = 0
-    contexts = [
-        build_file_context(
+    completed = skipped_existing
+    contexts: dict[int, GitFileContext] = {
+        index: build_file_context(
             repo_root,
-            row["文件路径"],
+            base_rows[index]["文件路径"],
             max_commits_per_file=max_commits_per_file,
             max_diff_lines_per_commit=max_diff_lines_per_commit,
             exclude_oldest_commit=exclude_oldest_commit,
         )
-        for row in rows
-    ]
-    results: list[dict[str, str] | None] = [None] * len(rows)
+        for index in pending_indices
+    }
 
-    async def worker(index: int, row: dict[str, str], context: GitFileContext) -> None:
+    async def worker(index: int) -> None:
         nonlocal completed
+        row = base_rows[index]
+        context = contexts[index]
         if verbose:
             async with progress_lock:
                 emit_line(f"开始处理: {row['文件路径']}")
@@ -571,17 +663,16 @@ async def analyze_rows(
                 model=model,
                 verbose=verbose,
             )
-        results[index] = result
         async with progress_lock:
+            current_results[index] = result
             completed += 1
+            if autosave and (output_csv is not None or output_json is not None):
+                write_snapshot(base_rows, current_results, output_csv, output_json)
             emit_line(format_progress_line(completed, total, result), enabled=show_progress)
 
-    tasks = [
-        asyncio.create_task(worker(index, row, contexts[index]))
-        for index, row in enumerate(rows)
-    ]
+    tasks = [asyncio.create_task(worker(index)) for index in pending_indices if index in pending_set]
     await asyncio.gather(*tasks)
-    return [result for result in results if result is not None]
+    return materialize_rows_snapshot(base_rows, current_results)
 
 
 async def analyze_single_row(
@@ -677,6 +768,7 @@ def write_json(rows: list[dict[str, str]], output_path: Path | str) -> None:
     risk_counter = Counter(row.get("风险等级", "") for row in rows)
     status_counter = Counter(row.get("分析状态", "") for row in rows)
     source_counter = Counter(row.get("变更来源", "") for row in rows)
+    pending_unprocessed = sum(1 for row in rows if not is_processed_row(row))
     payload = {
         "summary": {
             "total": len(rows),
@@ -685,6 +777,7 @@ def write_json(rows: list[dict[str, str]], output_path: Path | str) -> None:
             "missing_file": status_counter.get("跳过（文件不存在）", 0),
             "manual_review": status_counter.get("需人工复核", 0),
             "failed": status_counter.get("分析失败", 0),
+            "pending_unprocessed": pending_unprocessed,
             "risk_high": risk_counter.get("高", 0),
             "risk_medium": risk_counter.get("中", 0),
             "risk_low": risk_counter.get("低", 0),
@@ -698,8 +791,7 @@ def write_json(rows: list[dict[str, str]], output_path: Path | str) -> None:
 async def async_main(args: argparse.Namespace) -> int:
     repo_root = ensure_git_repo(args.repo_root)
     rows = load_musl_rows(args.csv)
-    if args.limit is not None:
-        rows = rows[: args.limit]
+    existing_rows_by_path = load_existing_enriched_rows(args.output_csv) if args.resume_existing else {}
     backend = select_backend(args.backend)
     analyzed_rows = await analyze_rows(
         rows,
@@ -716,18 +808,22 @@ async def async_main(args: argparse.Namespace) -> int:
         exclude_oldest_commit=args.exclude_oldest_commit,
         show_progress=not args.quiet,
         verbose=args.verbose,
+        existing_rows_by_path=existing_rows_by_path,
+        output_csv=args.output_csv,
+        output_json=args.output_json,
+        autosave=not args.no_autosave,
+        pending_limit=args.limit,
     )
-    write_csv(analyzed_rows, args.output_csv)
-    write_json(analyzed_rows, args.output_json)
     summary = Counter(row.get("分析状态", "") for row in analyzed_rows)
     emit_line(
-        "rows={total}, analyzed={analyzed}, no_self_changes={no_self_changes}, missing_file={missing_file}, manual_review={manual_review}, failed={failed}".format(
+        "rows={total}, analyzed={analyzed}, no_self_changes={no_self_changes}, missing_file={missing_file}, manual_review={manual_review}, failed={failed}, pending={pending}".format(
             total=len(analyzed_rows),
             analyzed=summary.get("已分析", 0),
             no_self_changes=summary.get("无自研修改", 0),
             missing_file=summary.get("跳过（文件不存在）", 0),
             manual_review=summary.get("需人工复核", 0),
             failed=summary.get("分析失败", 0),
+            pending=sum(1 for row in analyzed_rows if not is_processed_row(row)),
         ),
         enabled=True,
     )
@@ -752,6 +848,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-commits-per-file", type=int, default=DEFAULT_MAX_COMMITS_PER_FILE)
     parser.add_argument("--max-diff-lines-per-commit", type=int, default=DEFAULT_MAX_DIFF_LINES_PER_COMMIT)
     parser.add_argument("--exclude-oldest-commit", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--resume-existing", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--no-autosave", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
