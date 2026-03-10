@@ -1,8 +1,10 @@
 import csv
+import io
 import json
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from scripts.analyze_musl_changes_with_claude import (
@@ -90,6 +92,8 @@ class AnalyzeMuslChangesWithClaudeTests(unittest.IsolatedAsyncioTestCase):
                 cwd=repo,
                 model="sonnet",
                 exclude_oldest_commit=True,
+                show_progress=False,
+                verbose=False,
             )
 
             self.assertEqual(result[0]["变更来源"], "Backport+Huawei")
@@ -126,12 +130,60 @@ class AnalyzeMuslChangesWithClaudeTests(unittest.IsolatedAsyncioTestCase):
                 cwd=repo,
                 model="sonnet",
                 exclude_oldest_commit=True,
+                show_progress=False,
+                verbose=False,
             )
 
             self.assertEqual(result[0]["变更来源"], "无自研修改")
             self.assertEqual(result[0]["分析状态"], "无自研修改")
             self.assertEqual(result[0]["风险等级"], "低")
             self.assertEqual(backend.calls, 0)
+
+    async def test_analyze_rows_prints_progress_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            repo.mkdir()
+            self._init_git_repo(repo)
+            file_path = repo / "include/elf.h"
+            file_path.parent.mkdir(parents=True)
+            file_path.write_text("#define EM_NUM 1\n", encoding="utf-8")
+            self._commit_all(repo, "import musl baseline")
+            file_path.write_text("#define EM_NUM 2\n", encoding="utf-8")
+            self._commit_all(repo, "[Backport] add loongarch ids")
+
+            rows = [{header: "" for header in MUSL_ANALYSIS_HEADERS}]
+            rows[0]["文件路径"] = "include/elf.h"
+            backend = FakeBackend(
+                {
+                    "修改类型": ["架构适配"],
+                    "修改内容摘要": "补充 LoongArch 相关常量定义",
+                    "关联接口": [],
+                    "变更影响结论": "主要是架构常量补充，未直接看到公开接口行为变化",
+                    "风险等级": "低",
+                    "备注": "",
+                }
+            )
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                await analyze_rows(
+                    rows,
+                    backend=backend,
+                    repo_root=repo,
+                    timeout_seconds=5,
+                    retries=0,
+                    concurrency=1,
+                    max_turns=2,
+                    max_commits_per_file=5,
+                    max_diff_lines_per_commit=80,
+                    cwd=repo,
+                    model="sonnet",
+                    exclude_oldest_commit=True,
+                )
+
+            output = buffer.getvalue()
+            self.assertIn("开始分析 1 个文件", output)
+            self.assertIn("[1/1] include/elf.h -> 已分析", output)
 
     def test_load_musl_rows_accepts_legacy_single_column_header(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

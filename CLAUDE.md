@@ -36,6 +36,7 @@
 ## musl 分析脚本约定
 
 - 脚本：`scripts/analyze_musl_changes_with_claude.py`
+- 安装脚本：`scripts/install_claude_code_sdk.sh`
 - 运行方式：在目标源码仓上执行，或显式传入 `--repo-root`
 - 提交归因规则：
   - 标题前缀 `[Backport]` 归为社区回合提交
@@ -48,6 +49,8 @@
 
 - 默认输出目录：`out/musl/`
 - 先跑小样本，再扩大并发
+- 默认打印文件级进度；如需静默运行，添加 `--quiet`
+- 如需查看模型调用与重试日志，添加 `--verbose`
 - 当前默认参数：
   - `timeout=120s`
   - `retries=2`

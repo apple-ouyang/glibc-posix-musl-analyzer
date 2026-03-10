@@ -6,6 +6,7 @@ import csv
 import json
 import shutil
 import subprocess
+import sys
 import textwrap
 from collections import Counter
 from dataclasses import dataclass
@@ -103,9 +104,9 @@ class ClaudeSdkBackend:
     def __init__(self) -> None:
         try:
             from claude_code_sdk import ClaudeCodeOptions, query  # type: ignore
-        except ImportError as exc:  # pragma: no cover - 依赖不存在时走 CLI fallback
+        except ImportError as exc:
             raise RuntimeError(
-                "未安装 Python 版 Claude Code SDK，请先安装 claude_code_sdk，或改用 --backend cli。"
+                "未安装 Python 版 Claude Code SDK，请先运行 scripts/install_claude_code_sdk.sh，或改用 --backend cli。"
             ) from exc
         self._options_cls = ClaudeCodeOptions
         self._query = query
@@ -452,7 +453,7 @@ def parse_analysis_json(raw_text: str) -> dict[str, Any]:
             if not isinstance(parsed, dict):
                 raise ValueError("返回结果不是 JSON object")
             return parsed
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = exc
     raise ValueError(f"无法解析模型输出为 JSON: {last_error}")
 
@@ -490,6 +491,28 @@ def select_backend(name: str) -> AnalysisBackend:
         return ClaudeCliBackend()
 
 
+def describe_backend(backend: AnalysisBackend) -> str:
+    if isinstance(backend, ClaudeSdkBackend):
+        return "sdk"
+    if isinstance(backend, ClaudeCliBackend):
+        return "cli"
+    return backend.__class__.__name__
+
+
+def emit_line(message: str, *, enabled: bool = True, stream: Any = None) -> None:
+    if not enabled:
+        return
+    target = sys.stdout if stream is None else stream
+    print(message, file=target, flush=True)
+
+
+def format_progress_line(done: int, total: int, row: dict[str, str]) -> str:
+    risk = row.get("风险等级") or "-"
+    source = row.get("变更来源") or "-"
+    status = row.get("分析状态") or "-"
+    return f"[{done}/{total}] {row['文件路径']} -> {status} | 来源={source} | 风险={risk}"
+
+
 async def analyze_rows(
     rows: list[dict[str, str]],
     *,
@@ -504,8 +527,21 @@ async def analyze_rows(
     cwd: Path,
     model: str,
     exclude_oldest_commit: bool,
+    show_progress: bool = True,
+    verbose: bool = False,
 ) -> list[dict[str, str]]:
+    total = len(rows)
+    if total == 0:
+        emit_line("没有待分析的文件。", enabled=show_progress)
+        return []
+
+    emit_line(
+        f"开始分析 {total} 个文件 | backend={describe_backend(backend)} | model={model} | concurrency={concurrency} | timeout={timeout_seconds}s | retries={retries}",
+        enabled=show_progress,
+    )
     semaphore = asyncio.Semaphore(concurrency)
+    progress_lock = asyncio.Lock()
+    completed = 0
     contexts = [
         build_file_context(
             repo_root,
@@ -519,8 +555,12 @@ async def analyze_rows(
     results: list[dict[str, str] | None] = [None] * len(rows)
 
     async def worker(index: int, row: dict[str, str], context: GitFileContext) -> None:
+        nonlocal completed
+        if verbose:
+            async with progress_lock:
+                emit_line(f"开始处理: {row['文件路径']}")
         async with semaphore:
-            results[index] = await analyze_single_row(
+            result = await analyze_single_row(
                 row=row,
                 context=context,
                 backend=backend,
@@ -529,7 +569,12 @@ async def analyze_rows(
                 max_turns=max_turns,
                 cwd=cwd,
                 model=model,
+                verbose=verbose,
             )
+        results[index] = result
+        async with progress_lock:
+            completed += 1
+            emit_line(format_progress_line(completed, total, result), enabled=show_progress)
 
     tasks = [
         asyncio.create_task(worker(index, row, contexts[index]))
@@ -549,6 +594,7 @@ async def analyze_single_row(
     max_turns: int,
     cwd: Path,
     model: str,
+    verbose: bool,
 ) -> dict[str, str]:
     enriched = {header: row.get(header, "") for header in MUSL_ANALYSIS_HEADERS}
     enriched["文件分类"] = context.file_class
@@ -577,6 +623,8 @@ async def analyze_single_row(
     last_error: Exception | None = None
     for attempt in range(retries + 1):
         try:
+            if verbose:
+                emit_line(f"调用模型: {row['文件路径']} | attempt={attempt + 1}/{retries + 1}")
             raw_text = await asyncio.wait_for(
                 backend.analyze(
                     prompt=prompt,
@@ -593,8 +641,10 @@ async def analyze_single_row(
                     enriched[key] = value
             enriched["分析状态"] = "已分析"
             return enriched
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = exc
+            if verbose:
+                emit_line(f"模型失败: {row['文件路径']} | attempt={attempt + 1}/{retries + 1} | error={exc}", stream=sys.stderr)
             if attempt < retries:
                 await asyncio.sleep(min(2**attempt, 8))
     enriched["分析状态"] = "分析失败"
@@ -664,11 +714,13 @@ async def async_main(args: argparse.Namespace) -> int:
         cwd=Path(args.cwd),
         model=args.model,
         exclude_oldest_commit=args.exclude_oldest_commit,
+        show_progress=not args.quiet,
+        verbose=args.verbose,
     )
     write_csv(analyzed_rows, args.output_csv)
     write_json(analyzed_rows, args.output_json)
     summary = Counter(row.get("分析状态", "") for row in analyzed_rows)
-    print(
+    emit_line(
         "rows={total}, analyzed={analyzed}, no_self_changes={no_self_changes}, missing_file={missing_file}, manual_review={manual_review}, failed={failed}".format(
             total=len(analyzed_rows),
             analyzed=summary.get("已分析", 0),
@@ -676,10 +728,11 @@ async def async_main(args: argparse.Namespace) -> int:
             missing_file=summary.get("跳过（文件不存在）", 0),
             manual_review=summary.get("需人工复核", 0),
             failed=summary.get("分析失败", 0),
-        )
+        ),
+        enabled=True,
     )
-    print(f"csv: {args.output_csv}")
-    print(f"json: {args.output_json}")
+    emit_line(f"csv: {args.output_csv}", enabled=True)
+    emit_line(f"json: {args.output_json}", enabled=True)
     return 0
 
 
@@ -699,6 +752,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-commits-per-file", type=int, default=DEFAULT_MAX_COMMITS_PER_FILE)
     parser.add_argument("--max-diff-lines-per-commit", type=int, default=DEFAULT_MAX_DIFF_LINES_PER_COMMIT)
     parser.add_argument("--exclude-oldest-commit", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
     return parser.parse_args()
 
